@@ -27,8 +27,37 @@ db.connect(err => {
             "Erro ao conectar com o banco de dados", err);
             return;
     } 
-    console.log('Conectado com o banco de dados 👍')
+    console.log('Conectado com o banco de dados 👍');
 })
 
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: {secure: false}
+}));
+
+const authenticateSession = (req, res, next) => {
+    if (!req.session.userID){
+        return res.status(401).send('Acesso negado, faça login para continuar');
+    }
+    next();
+}
+
+app.post('/login', (req, res) => {
+    const {cpf, senha} = req.body;
+
+    db.query("SELECT * FROM usuarios  WHERE cpf = ?", [cpf], async(err, results) => {
+        if(err) return res.status(500).send('Server com erro');
+        if (results.length === 0) return res.status(500).send("CPF ou senha incorretos");
+            const usuario = results[0];
+            const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+            if(!senhaCorreta) return res.status(500).send('CPF ou senha incorretos');
+            req.session.userID = usuario.idUsuarios;
+            console.groupt('idUsuario:', usuario.idUsuarios);
+            res.json({message: "Login bem-sucedido"});
+    });
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`))
+app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
