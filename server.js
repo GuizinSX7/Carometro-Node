@@ -59,5 +59,47 @@ app.post('/login', (req, res) => {
     });
 });
 
+app.post('cadastro', async (req, res) => {
+    const {nome, email, cpf, senha, celular, cep, logradouro, bairro, cidade, estado, imagem, Tipos_Usuarios} = req.body;
+
+    cep = cep.replace(/-/g,'');
+
+    db.query(
+        'SELECT cpf FROM usuarios WHERE cpf = ?', [cpf],
+        async(err, results) => {
+            if (err) {
+                console.error('Erro ao consultar o CPF', err);
+                return res.status(500).json({message: 'Erro ao verficar o CPF'})   
+            }
+
+            if (results.length > 0) {
+                return res.status(400).json({message: "CPF já cadastrado"})
+            }
+
+            const senhacripto = await bcrypt.hash(senha, 10);
+
+            db.query("INSERT INTO usuarios (nome, email, cpf, senha, celular, cep, logradouro, bairro, cidade, estado, imagem, Tipos_Usuarios) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"),
+            [nome, email, cpf, senhacripto, celular, cep, logradouro, bairro, cidade, estado, imagem, Tipos_Usuarios],
+            (err, results) => {
+                console.error('Erro ao inserir usuário');
+                return res.status(500).json({message: 'Erro ao cadastrar usuário'})
+            }
+            console.log('Usuário inserido com sucesso', results.idUsuarios);
+            res.status(200).json({message: 'Usuário cadastrado com sucesso!'})
+        }
+    )
+});
+
+app.use(express.static('src'));
+app.use(express.static(__dirname + '/src'));
+
+app.get('/login', (req, res) => {
+    res.sendFile(__dirname + '/src/login.html')
+})
+
+app.get('/cadastro', (req, res) => {
+    res.sendFile(__dirname + '/src/cadastroUsuarios.html')
+})
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
